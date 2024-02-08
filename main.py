@@ -19,7 +19,7 @@ DEFAULT_DA_ADDRESS = 0x200D00
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", help="Device config")
-    parser.add_argument("-t", "--test", help="Testmode", const="0x9900", nargs='?')
+    parser.add_argument("-t", "--test", help="Testmode",action="store_true", const="0x9900", nargs='?')
     parser.add_argument("-w", "--watchdog", help="Watchdog address(in hex)")
     parser.add_argument("-u", "--uart", help="UART base address(in hex)")
     parser.add_argument("-v", "--var_1", help="var_1 value(in hex)")
@@ -37,7 +37,10 @@ def main():
     elif not os.path.exists(DEFAULT_CONFIG):
         raise RuntimeError("Default config is missing")
 
-    device = Device().find()
+    if arguments.serial_port:
+        device = Device(arguments.serial_port)
+    else:
+        device = Device().find()
 
     config, serial_link_authorization, download_agent_authorization, hw_code  = get_device_info(device, arguments)
 
@@ -75,19 +78,19 @@ def main():
 
         payload = prepare_payload(config)
 
-        result = exploit(device, config, payload, arguments)
+        result = exploit(device, config.watchdog_address, config.payload_address, config.var_0, config.var_1, payload)
         if arguments.test:
             while not result:
                 device.dev.close()
                 config.var_1 += 1
                 log("Test mode, testing " + hex(config.var_1) + "...")
-                reconnect_message()
-                device = Device().find(wait=True)
+                device = Device().find()
                 device.handshake()
                 while device.preloader:
                     device = crash_preloader(device, config)
                     device.handshake()
-                result = exploit(device, config, payload, arguments)
+                result = exploit(device, config.watchdog_address, config.payload_address,
+                                 config.var_0, config.var_1, payload)
     else:
         log("Insecure device, sending payload using send_da")
 
@@ -105,6 +108,7 @@ def main():
 
         result = device.read(4)
 
+    bootrom__name = "bootrom_" + hex(hw_code)[2:] + ".bin"
     if result == to_bytes(0xA1A2A3A4, 4):
         log("Protection disabled")
     elif result == to_bytes(0xC1C2C3C4, 4):
