@@ -25,6 +25,7 @@ def main():
     parser.add_argument("-v", "--var_1", help="var_1 value(in hex)")
     parser.add_argument("-a", "--payload_address", help="payload_address value(in hex)")
     parser.add_argument("-p", "--payload", help="Payload to use")
+    parser.add_argument("-s", "--serial_port", help="Connect to existing serial port")
     parser.add_argument("-f", "--force", help="Force exploit on insecure device", action="store_true")
     parser.add_argument("-n", "--no_handshake", help="Skip handshake", action="store_true")
     parser.add_argument("-m", "--crash_method", help="Method to use for crashing preloader (0, 1, 2)", type=int)
@@ -109,6 +110,7 @@ def main():
         result = device.read(4)
 
     bootrom__name = "bootrom_" + hex(hw_code)[2:] + ".bin"
+
     if result == to_bytes(0xA1A2A3A4, 4):
         log("Protection disabled")
     elif result == to_bytes(0xC1C2C3C4, 4):
